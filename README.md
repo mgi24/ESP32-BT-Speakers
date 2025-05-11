@@ -1,6 +1,6 @@
 # ESP32DAC
-Kodenya belom jadi woe, gausah tanya dlu cara makenya gimana
+KONSEP PROJECT: https://youtu.be/UAh4aV3UmR8
 
-cek dlu aja video pertama soal konsepnya: https://youtu.be/UAh4aV3UmR8
+Install library ini dulu: https://github.com/pschatzmann/ESP32-A2DP
 
-klo usah jadi ntar w edit reponya baru tanya bebas, sekarang tanya konsep dlu aja
+Pakai kode simple.ino dulu untuk tes apakah koneksi kabel anda sudah benar, tutorial pake kode simple: (BELUM DIUPLOAD)
