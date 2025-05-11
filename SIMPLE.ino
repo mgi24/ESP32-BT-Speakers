@@ -2,13 +2,13 @@
 #include "BluetoothA2DPSink.h"
 #include "driver/i2s.h"
 
-BluetoothA2DPSink a2dp_sink;
-#define mutepin 2
-#define mosfet 4
-// config your I2S PIN im using cs4344 so i need MCLK
+#define BTLED 2
+BluetoothA2DPSink a2dp_sink; // Initialize Library
+
+// config your I2S PIN
 i2s_pin_config_t pin_config = {
-    .mck_io_num = 3,                 // MCLK pin
-    .bck_io_num = 19,                // BCK pin
+    .mck_io_num = 3,                 // MCLK pin, ONLY USE gpio 0,1,or 3 otherwise not work
+    .bck_io_num = 19,                // BCK/SCK pin
     .ws_io_num = 21,                 // LRCK pin
     .data_out_num = 18,              // DATA out pin
     .data_in_num = I2S_PIN_NO_CHANGE // Not used
@@ -28,13 +28,11 @@ i2s_config_t i2s_config_stereo = {
     .tx_desc_auto_clear = true,                                             // Auto clear tx descriptor on underflow
     .fixed_mclk = 0                                                         // Konfigurasi MCLK ke 11.2896 MHz
 };
-//change 8bit format to 16bit format
-void audio_data_callback(const uint8_t *data, uint32_t len)
+// change 8bit format to 16bit format, easier to process later
+void audio_data_callback(const uint8_t *data, uint32_t len) // BT data on 8bit format
 {
-  // len is in bytes, divide by 4 to get the number of 16-bit stereo samples
-  size_t num_samples = len / 4;
-  // Temporary buffer to store converted int16_t data
-  int16_t i2s_data[num_samples * 2];
+  size_t num_samples = len / 4;      // LLSB, LMSB, RMSB, RLSB, so divide by 4 per point
+  int16_t i2s_data[num_samples * 2]; // Create a temporary buffer for 16-bit stereo samples
 
   for (size_t i = 0; i < num_samples; i++)
   {
@@ -47,26 +45,31 @@ void audio_data_callback(const uint8_t *data, uint32_t len)
     i2s_data[i * 2 + 1] = right;
   }
   size_t i2s_bytes_written;
-  i2s_write(I2S_NUM_0, i2s_data, sizeof(i2s_data), &i2s_bytes_written, portMAX_DELAY);//sent to DAC
+  i2s_write(I2S_NUM_0, i2s_data, sizeof(i2s_data), &i2s_bytes_written, portMAX_DELAY); // sent to DAC
 }
 
 void setup()
-{
-  Serial.begin(115200);
-  pinMode(mosfet, OUTPUT);
-  pinMode(mutepin, OUTPUT);
-  digitalWrite(mosfet, HIGH);
-  digitalWrite(mutepin, HIGH);
+{ 
+  Serial.begin(115200); // disable if not used please, since pin RX/gpio 3 is used for MCLK
 
-  i2s_driver_install(I2S_NUM_0, &i2s_config_stereo, 0, NULL);
-  i2s_set_pin(I2S_NUM_0, &pin_config);
+  pinMode(BTLED, OUTPUT); // Set BTLED as output
 
-  a2dp_sink.set_stream_reader(audio_data_callback, false);
-  a2dp_sink.set_auto_reconnect(true);
-  a2dp_sink.start("Harman/Kardon Genie");
+  i2s_driver_install(I2S_NUM_0, &i2s_config_stereo, 0, NULL); // install i2s config
+  i2s_set_pin(I2S_NUM_0, &pin_config);                        // configure pin
+
+  a2dp_sink.set_stream_reader(audio_data_callback, false); // if audio received, run this program
+  a2dp_sink.set_auto_reconnect(true);                      // remember last device and try to connect
+  a2dp_sink.start("Harman/Kardon Genie");                  // Speaker name on BT
 }
 
 void loop()
 {
-  //empty, want more function? check github!
+  if (a2dp_sink.is_connected())
+  {
+    digitalWrite(BTLED, HIGH); // Turn on LED when connected
+  }
+  else
+  {
+    digitalWrite(BTLED, LOW); // Turn off LED when disconnected
+  }
 }
